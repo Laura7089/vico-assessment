@@ -15,6 +15,7 @@ begin
 	using DataFrames
 	using PlutoUI
 	using LinearAlgebra
+	using Rotations
 end
 
 # ╔═╡ 169f0ebc-59ce-4a95-ad36-71313b346aa0
@@ -127,18 +128,62 @@ md"""
 # ╔═╡ 334bc7ce-5338-466f-b566-a7f04cd739c5
 md"""
 #### Q1ii Part a
+"""
 
+# ╔═╡ 8f52cf6a-c4f0-4d8b-921a-806e87be3c0e
+const ciexyY = (x = 0.3892, y = 0.5135, Y = 0.95)
 
+# ╔═╡ 1a358b1f-4a89-4cd8-9b0a-c1a5a34e2c7b
+const cieXYZtosRGB = [
+	3.2406 -1.5372 -0.4986
+	-0.9689 1.8758 0.0415
+	0.0557 -0.2040 1.0570
+]
+
+# ╔═╡ 15788dc0-37b6-4e98-901f-addf99b3cb6a
+function xyYtoXYZ(x, y, Y)
+	[Y * x / y, Y, Y * (1 - x - y) / y]
+end
+
+# ╔═╡ c54755f1-12e7-432e-b1a8-5faf323b4b46
+const sRGBγ = 2.2
+
+# ╔═╡ ab93f4b2-cc56-4a94-8820-02f4726ce20b
+begin
+	# convert to cie XYZ
+	XYZ = xyYtoXYZ(ciexyY...)
+	# convert to linear sRGB
+	sRGBlinear = cieXYZtosRGB * XYZ
+	# apply gamma correction
+	sRGBunclamped = sRGBlinear .^ inv(sRGBγ)
+	# clamp to [0, 1]
+	sRGB = clamp.(sRGBunclamped, 0.0, 1.0)
+	# scale to 8 bits
+	sRGB8bit = sRGB .* 255
+	print(sRGB8bit)
+end
+
+# ╔═╡ 44f7765b-6954-4704-88a9-f63774f0f133
+md"""
+Hence, our colour is **$(string(Int.(floor.(sRGB8bit))))** on the graphics card.
+"""
+
+# ╔═╡ 6c8e30a6-bbd8-4eaf-a652-fe5fa15278dd
+md"""
+#### Q1ii Part b
+
+!!! warning
+	TODO
 """
 
 # ╔═╡ 3610f6ab-6ca6-4930-910e-ad3ece7d7a5d
 md"""
-#### Q1iii Part b
+### Q1 Part iii
 
 The Phong BRDF Specular lobe term is:
 
 ```math
-f_r(v_i, v_r) = k_s(v_r \cdot r_{v_r})^m
+f_{rp}(v_i, v_r) = k_s(v_r \cdot r_{v_r})^m
 ```
 
 Where ``r_{v_r}`` is the mirror of ``v_r``.
@@ -156,12 +201,17 @@ end
 md"""
 The Lambertian diffuse lobe term is:
 
-!!! warning
-	TODO
-
 ```math
+f_{rl}(\rho_d) = \frac{\rho_d}{\pi}
 ```
+
+As code:
 """
+
+# ╔═╡ 22bdc7c7-585d-40fe-ab1e-46f91a2ab758
+function lambertianlobe(ρd)
+	return ρd / π
+end
 
 # ╔═╡ 68a507c3-614c-4234-8fd3-6f4571a5570c
 begin
@@ -170,9 +220,38 @@ begin
 	const ks = [64, 64, 64]
 	const m = 16
 	const Li = [128, 255, 128]
-	const vi = (θ = π/4, π = 0)
+	const vi = (θ = π/4, ϕ = 0)
 	const vr = (θ = π/6, ϕ = π)
 end
+
+# ╔═╡ cd48fe4d-c42a-436e-9cc7-d66fefb5cabe
+md"""
+Since ``v_i`` and ``v_r`` are provided as angles, we muse compute their unit-vector representation:
+"""
+
+# ╔═╡ 88d1e618-c952-494b-b246-c73dc77d96fa
+function anglestounitvec(ϕ, θ)
+	t = [1, 0, 0]
+	# rotate by ϕ
+	rotated = AngleAxis(ϕ, 0, 1, 0) * t
+	# rotate by 90° - θ
+	rotated = AngleAxis(π/2 - θ, 0, 0, 1) * t
+	return rotated
+end
+
+# ╔═╡ 82b29bfc-4a76-4840-a6c1-4972662c75ca
+begin
+	vit = anglestounitvec(vi...)
+	vrt = anglestounitvec(vr...)
+end
+
+# ╔═╡ 53305365-645b-487b-9f6f-2996e9cf0b07
+md"""
+Hence:
+"""
+
+# ╔═╡ 5c2e2486-7c17-40c8-b77c-59515a4c56e3
+fr = phonglobe()
 
 # ╔═╡ 1542f5e6-2738-44b5-bfb7-6721cb78fe4f
 md"""
@@ -205,9 +284,6 @@ COP_2COP_1 = \begin{bmatrix}
 0 & 0 & 0 & 1
 \end{bmatrix}
 ```
-
-!!! warning
-	check me
 """
 
 # ╔═╡ cb27513c-80b2-421a-8d0a-13de0e43b133
@@ -259,16 +335,21 @@ $(LocalResource("./corridor_epipolar.png"))
 md"""
 #### Q2ii Part c
 
-!!! warning
-	TODO
+Iterate a 2-size (overlapping) window over the sequence of images, running the following steps each time to get the relative pose of the second image's camera vs. the first:
+
+1. Run appropriate feature matching method between images (SIFT recommended)
+1. Set coordinate system for first image to have COP at origin, looking down the x axis
+1. Use matched features to determine approximate fundamental matrix for converting image 1 to image 2
+1. Calculate real-world-displacement of image 2 from image 1 using known intrinsic properties of camera
 """
 
 # ╔═╡ 05e6abda-1d1f-4300-832e-84692d0e109d
 md"""
 #### Q2ii Part d
 
-!!! warning
-	TODO
+- Several features of the image are very similar to one another, eg. doors and lights
+- The texturing on the walls of the corridor is very plain and shows little variation from one spot to another, so few features can be extracted
+- The specular highlights on the floor and walls will naturally shift as the camera moves, if feature detection algorithms may idenfify them as features in 3D space, calculations will be thrown off
 """
 
 # ╔═╡ 43aaf1f1-3231-4f5b-aac8-e21f805d6457
@@ -362,10 +443,12 @@ PLUTO_PROJECT_TOML_CONTENTS = """
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
+Rotations = "6038ab10-8711-5258-84ad-4b1120ba62dc"
 
 [compat]
 DataFrames = "~1.6.1"
 PlutoUI = "~0.7.54"
+Rotations = "~1.6.1"
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000002
@@ -374,7 +457,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.10.0"
 manifest_format = "2.0"
-project_hash = "5ea1f0e2f744504db1406fcc0f6fb2cf828da5d9"
+project_hash = "e5e901b111b812ececbe9868f32776097bf288b1"
 
 [[deps.AbstractPlutoDingetjes]]
 deps = ["Pkg"]
@@ -631,6 +714,12 @@ version = "2.3.1"
 deps = ["Unicode"]
 uuid = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 
+[[deps.Quaternions]]
+deps = ["LinearAlgebra", "Random", "RealDot"]
+git-tree-sha1 = "9a46862d248ea548e340e30e2894118749dc7f51"
+uuid = "94ee1d12-ae83-5a48-8b1c-48b8ff168ae0"
+version = "0.7.5"
+
 [[deps.REPL]]
 deps = ["InteractiveUtils", "Markdown", "Sockets", "Unicode"]
 uuid = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
@@ -639,10 +728,22 @@ uuid = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
 deps = ["SHA"]
 uuid = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 
+[[deps.RealDot]]
+deps = ["LinearAlgebra"]
+git-tree-sha1 = "9f0a1b71baaf7650f4fa8a1d168c7fb6ee41f0c9"
+uuid = "c1ae055f-0cd5-4b69-90a6-9a35b1a98df9"
+version = "0.1.0"
+
 [[deps.Reexport]]
 git-tree-sha1 = "45e428421666073eab6f2da5c9d310d99bb12f9b"
 uuid = "189a3867-3050-52da-a836-e630ba90ab69"
 version = "1.2.2"
+
+[[deps.Rotations]]
+deps = ["LinearAlgebra", "Quaternions", "Random", "StaticArrays"]
+git-tree-sha1 = "792d8fd4ad770b6d517a13ebb8dadfcac79405b8"
+uuid = "6038ab10-8711-5258-84ad-4b1120ba62dc"
+version = "1.6.1"
 
 [[deps.SHA]]
 uuid = "ea8e919c-243c-51af-8825-aaa63cd721ce"
@@ -670,6 +771,25 @@ version = "1.2.1"
 deps = ["Libdl", "LinearAlgebra", "Random", "Serialization", "SuiteSparse_jll"]
 uuid = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 version = "1.10.0"
+
+[[deps.StaticArrays]]
+deps = ["LinearAlgebra", "PrecompileTools", "Random", "StaticArraysCore"]
+git-tree-sha1 = "f68dd04d131d9a8a8eb836173ee8f105c360b0c5"
+uuid = "90137ffa-7385-5640-81b9-e52037218182"
+version = "1.9.1"
+
+    [deps.StaticArrays.extensions]
+    StaticArraysChainRulesCoreExt = "ChainRulesCore"
+    StaticArraysStatisticsExt = "Statistics"
+
+    [deps.StaticArrays.weakdeps]
+    ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
+    Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
+
+[[deps.StaticArraysCore]]
+git-tree-sha1 = "36b3d696ce6366023a0ea192b4cd442268995a0d"
+uuid = "1e83bf80-4336-4d27-bf5d-d5a4f845583c"
+version = "1.4.2"
 
 [[deps.Statistics]]
 deps = ["LinearAlgebra", "SparseArrays"]
@@ -764,11 +884,24 @@ version = "17.4.0+2"
 # ╠═4577a569-2f6f-43e1-96af-551f86a7548e
 # ╟─b8f55c25-d48a-4cf1-aa55-b4e1796b8d44
 # ╟─23ed8e3e-ddc3-4cc3-8586-06d5eacd2524
-# ╠═334bc7ce-5338-466f-b566-a7f04cd739c5
+# ╟─334bc7ce-5338-466f-b566-a7f04cd739c5
+# ╠═8f52cf6a-c4f0-4d8b-921a-806e87be3c0e
+# ╠═1a358b1f-4a89-4cd8-9b0a-c1a5a34e2c7b
+# ╠═15788dc0-37b6-4e98-901f-addf99b3cb6a
+# ╠═c54755f1-12e7-432e-b1a8-5faf323b4b46
+# ╠═ab93f4b2-cc56-4a94-8820-02f4726ce20b
+# ╟─44f7765b-6954-4704-88a9-f63774f0f133
+# ╟─6c8e30a6-bbd8-4eaf-a652-fe5fa15278dd
 # ╟─3610f6ab-6ca6-4930-910e-ad3ece7d7a5d
 # ╠═5b4b1649-28a6-4fac-b76a-06c81d4b6852
 # ╟─455e6b26-90f2-4067-8d41-46e94085eed9
+# ╠═22bdc7c7-585d-40fe-ab1e-46f91a2ab758
 # ╠═68a507c3-614c-4234-8fd3-6f4571a5570c
+# ╟─cd48fe4d-c42a-436e-9cc7-d66fefb5cabe
+# ╠═88d1e618-c952-494b-b246-c73dc77d96fa
+# ╠═82b29bfc-4a76-4840-a6c1-4972662c75ca
+# ╠═53305365-645b-487b-9f6f-2996e9cf0b07
+# ╠═5c2e2486-7c17-40c8-b77c-59515a4c56e3
 # ╟─1542f5e6-2738-44b5-bfb7-6721cb78fe4f
 # ╟─cd791d2f-e627-4790-b58d-43c48e0d795e
 # ╟─8ea0649b-c0cb-4864-9feb-97c7ec0c6c05
