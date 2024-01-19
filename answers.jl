@@ -62,7 +62,7 @@ Setting our two equations equal and rearranging for ``\lambda``:
 # ╔═╡ 2ec3752e-22a2-4ab4-a79c-2ae2f3fa2684
 begin
 	# photon emission rate of the LED
-	const n = 10e19
+	const n = 10.0 ^ 19
 	
 	# radiant flux of the LED
 	const Φ = 3.0
@@ -71,7 +71,7 @@ begin
 	const h = 6.626e-34
 
 	# speed of light
-	const c = 299_792_458
+	const c = 299_792_458.0
 
 	λ = (h * c * n) / Φ
 
@@ -80,7 +80,7 @@ end
 
 # ╔═╡ 83ca689f-ba67-4524-9335-66bf837ccacf
 md"""
-Hence, the final wavelength of the light source is approximately **$(round(λ * 10e6, digits=4))μm**.
+Hence, the final wavelength of the light source is approximately **$(round(λ * 1e9, digits=4))nm**.
 """
 
 # ╔═╡ f48f7d00-790b-4424-b3bb-e8a0900558e9
@@ -116,7 +116,7 @@ end
 
 # ╔═╡ b8f55c25-d48a-4cf1-aa55-b4e1796b8d44
 md"""
-Hence, our light source has a luminous intensity of **$(Int(round(luminousflux)))lm**.
+Hence, our light source has a luminous intensity of **$(round(luminousflux, digits=4))lm**.
 """
 
 # ╔═╡ 23ed8e3e-ddc3-4cc3-8586-06d5eacd2524
@@ -195,26 +195,46 @@ The right edge of face 1 and the left edge of face 2 are one and the same.
 md"""
 #### Q2i Part b
 
-The world-to-image conversion matrices of each camera are as follows:
-
-!!! warning
-	TODO
+We can construct the transformation from COP2 to COP1:
 
 ```math
-\begin{align}
-C_1 &= \begin{bmatrix}
-	
+COP_2COP_1 = \begin{bmatrix}
+0 & 0 & -1 & -d\\
+0 & 1 & 0 & 0 \\
+1 & 0 & 0 & 0 \\
+0 & 0 & 0 & 1
 \end{bmatrix}
-\end{align}
 ```
+
+!!! warning
+	check me
 """
 
 # ╔═╡ cb27513c-80b2-421a-8d0a-13de0e43b133
 md"""
 #### Q2i Part c
 
-!!! warning
-	TODO
+For image 1:
+
+```math
+\begin{bmatrix}
+\cos(-45\degree) & 0 & \sin(-45\degree) & 0 \\
+0 & 1 & 0 & 0 \\
+-\sin(-45\degree) & 0 & \cos(-45\degree) & 0 \\
+0 & 0 & 0 & 1
+\end{bmatrix}
+```
+
+For image 2:
+
+```math
+\begin{bmatrix}
+\cos(45\degree) & 0 & \sin(45\degree) & -d \\
+0 & 1 & 0 & 0 \\
+-\sin(45\degree) & 0 & \cos(45\degree) & 0 \\
+0 & 0 & 0 & 1
+\end{bmatrix}
+```
 """
 
 # ╔═╡ d7b33754-3927-4ec0-8e40-b28ca18b2525
@@ -293,6 +313,34 @@ In the case of the cube, all areas of the cube are visible, but the areas around
 md"""
 ### Q4 Part ii
 
+#### Q4ii Part a
+
+Shape-from-Silhouettes:
+
+- Dis 1
+- Dis 2
+
+Space Carving:
+
+- The final representation is constructed from voxels, which limits the prevision attainable
+- Dis 2
+
+!!! warning
+	TODO
+
+#### Q4ii Part b
+
+The representations obtained from both methods can be improved by:
+
+- Taking more images
+- Obtaining more accurate and more precise calibration data on relative camera positioning
+
+Space Carving can be improved by:
+
+- Increasing the voxel count/decreasing the voxel size
+
+Shape-from-Silhouette can be improved by:
+
 !!! warning
 	TODO
 """
@@ -301,8 +349,11 @@ md"""
 md"""
 ### Q4 Part iii
 
-!!! warning
-	TODO
+The operator would be likely to detect features that represent some kind of distinct, non-regular point.
+This typically would include:
+
+- Edges and corners of 3D objects against a sufficiently contrasting background
+- High-contrast features resting on the surfaces of 3D objects, such as blemishes, different swatches of colour, dots
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
