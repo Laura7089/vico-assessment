@@ -22,7 +22,9 @@ end
 md"""
 # VICO Exam 2023
 
-Exam Number: Y3863148
+Exam Number: `Y3863148`.
+
+Submission is a [Pluto notebook](https://github.com/fonsp/Pluto.jl) exported as a PDF.
 """
 
 # ╔═╡ 24a5b52f-d8b3-428c-9447-6ab83d0ac884
@@ -193,8 +195,9 @@ As code:
 
 # ╔═╡ 5b4b1649-28a6-4fac-b76a-06c81d4b6852
 function phonglobe(vi, vr, ks, m)
-	rvi = vi .* -1
-	return ks * dot(vr, rvi) ^ m
+	# Rotate the incidence angle around the y axis to reflect it
+	rvi = AngleAxis(π/2, 0, 1, 0) * vi
+	return ks .* dot(vr, rvi) .^ m
 end
 
 # ╔═╡ 455e6b26-90f2-4067-8d41-46e94085eed9
@@ -243,6 +246,9 @@ end
 begin
 	vit = anglestounitvec(vi...)
 	vrt = anglestounitvec(vr...)
+
+	println(vit)
+	println(vrt)
 end
 
 # ╔═╡ 53305365-645b-487b-9f6f-2996e9cf0b07
@@ -251,7 +257,31 @@ Hence:
 """
 
 # ╔═╡ 5c2e2486-7c17-40c8-b77c-59515a4c56e3
-fr = phonglobe()
+begin
+	fr = phonglobe(vit, vrt, ks ./ 255, m) + lambertianlobe.(ρd ./255)
+	print(fr)
+end
+
+# ╔═╡ be113757-10b4-42b1-87ac-3ffc7df115f6
+md"""
+We must reduce the incident light intensity by the square of the distance:
+"""
+
+# ╔═╡ 3990284b-35ce-4844-9e4d-54a6a77d1e09
+Li_reduced = Li ./ (r^2)
+
+# ╔═╡ 071c74d4-e449-476d-a507-17fa66ebc4f9
+md"""
+Finally:
+"""
+
+# ╔═╡ 4290b921-9b40-4cef-92aa-5fdbe03f06a8
+Lr = Li_reduced .* fr
+
+# ╔═╡ b28f995e-9572-4686-a6f1-9768c9069512
+md"""
+Hence, our observed colour is approximately **$(string(Int.(round.(Lr))))**.
+"""
 
 # ╔═╡ 1542f5e6-2738-44b5-bfb7-6721cb78fe4f
 md"""
@@ -900,8 +930,13 @@ version = "17.4.0+2"
 # ╟─cd48fe4d-c42a-436e-9cc7-d66fefb5cabe
 # ╠═88d1e618-c952-494b-b246-c73dc77d96fa
 # ╠═82b29bfc-4a76-4840-a6c1-4972662c75ca
-# ╠═53305365-645b-487b-9f6f-2996e9cf0b07
+# ╟─53305365-645b-487b-9f6f-2996e9cf0b07
 # ╠═5c2e2486-7c17-40c8-b77c-59515a4c56e3
+# ╟─be113757-10b4-42b1-87ac-3ffc7df115f6
+# ╠═3990284b-35ce-4844-9e4d-54a6a77d1e09
+# ╟─071c74d4-e449-476d-a507-17fa66ebc4f9
+# ╠═4290b921-9b40-4cef-92aa-5fdbe03f06a8
+# ╟─b28f995e-9572-4686-a6f1-9768c9069512
 # ╟─1542f5e6-2738-44b5-bfb7-6721cb78fe4f
 # ╟─cd791d2f-e627-4790-b58d-43c48e0d795e
 # ╟─8ea0649b-c0cb-4864-9feb-97c7ec0c6c05
