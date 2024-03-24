@@ -196,7 +196,7 @@ As code:
 # ╔═╡ 5b4b1649-28a6-4fac-b76a-06c81d4b6852
 function phonglobe(vi, vr, ks, m)
 	# Rotate the incidence angle around the y axis to reflect it
-	rvi = AngleAxis(π/2, 0, 1, 0) * vi
+	rvi = AngleAxis(π, 0, 1, 0) * vi
 	return ks .* dot(vr, rvi) .^ m
 end
 
